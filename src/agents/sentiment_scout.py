@@ -37,3 +37,9 @@ class RedditSentimentAgent:
         avg = sum(scores) / len(scores)
         mood = "Bullish" if avg > 0.2 else "Bearish" if avg < -0.2 else "Neutral"
         return f"Avg sentiment score: {round(avg, 3)} — {mood}"
+
+    def get_score(self) -> float:
+        titles = self.fetch_titles()
+        scores = self.score_sentiment(titles)
+        return sum(scores) / len(scores) if scores else 0.0
+

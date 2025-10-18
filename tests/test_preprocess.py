@@ -1,5 +1,5 @@
 import pandas as pd
-from src.preprocess import engineer_features
+from scripts.create_features import engineer_features
 
 def test_engineer_features():
     # Sample mini-DataFrame
