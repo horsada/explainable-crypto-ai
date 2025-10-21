@@ -1,6 +1,7 @@
 import os
 import json
 from glob import glob
+import joblib
 
 def get_latest_model_metadata(models_dir="models/"):
     meta_files = sorted(
@@ -14,6 +15,6 @@ def get_latest_model_metadata(models_dir="models/"):
 
 def load_latest_model():
     metadata = get_latest_model_metadata()
-    import joblib
+
     model = joblib.load(metadata["model_path"])
     return model, metadata

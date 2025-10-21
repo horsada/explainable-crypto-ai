@@ -1,0 +1,14 @@
+data_path: data/train.csv
+features:
+  features: ["ret_1","lag_close_1","roll_mean_close_5","roll_std_close_5"]
+  returns_windows: [1]
+  lag_features: {"close":[1]}
+  rolling_mean: {"close":[5]}
+  rolling_std: {"close":[5]}
+  dropna: true
+  fillna: null
+  align_on_open_time: true
+trainer:
+  random_state: 42
+  lgbm_params: {"num_leaves": 31, "learning_rate": 0.05}
+  output_dir: models

@@ -18,5 +18,5 @@ def fetch_binance_ohlcv(symbol="BTCUSDT", interval="1h", limit=100):
 
 if __name__ == "__main__":
     df = fetch_binance_ohlcv()
-    df.to_csv("data/binance_data.csv")
-    print("Saved Binance data to data/binance_data.csv")
+    df.to_csv("data/train.csv")
+    print("Saved Binance data to data/train.csv")
