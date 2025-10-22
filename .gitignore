@@ -5,3 +5,5 @@ plots/
 .venv/
 __pycache__/
 logs/
+splits/
+runs/

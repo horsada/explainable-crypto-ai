@@ -1,16 +1,9 @@
-# Snapshot & universe
-snapshot: "2025-10-22"
-exchange: "binance"
-symbols: ["BTC/USDT","ETH/USDT"]
-
-# Splits (rolling)
-splits:
-  train: "60D"
-  valid: "30D"
-  step:  "30D"
-  embargo: "1D"
-
-# Backtest engine (fees/latency/vol-target)
+# conf/engine_backtest.yaml
+mode: "multi"                           # or "single"
+data_path: "runs/my_model/panel.parquet"  # columns: timestamp, symbol, close, signal
+out_path: "runs/my_model/backtest.parquet"
+price_col: "close"
+signal_col: "signal"
 engine:
   fee_bps: 1.0
   slippage_bps: 1.0
@@ -18,10 +11,3 @@ engine:
   target_vol_ann: 0.20
   max_leverage: 3.0
   vol_lookback: 60
-
-# What to run
-benchmarks: ["hodl","vt_hodl","momentum"]   # ML optional later
-
-# Output
-out_dir: "runs"
-run_tag: "default"   # appended to folder name
