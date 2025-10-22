@@ -1,26 +1,15 @@
+# src/excrypto/cli.py
 import typer
-from excrypto.pipeline.snapshot import run as snapshot_run
-from excrypto.pipeline import run as features_run
-from excrypto.training.runner import run as train_run
-from excrypto.inference.runner import run as predict_run
+from excrypto.pipeline.cli import app as pipeline_app
+from excrypto.training.cli import app as training_app
+from excrypto.inference.cli import app as inference_app
+#from excrypto.runner.cli import app as runner_app
 
-app = typer.Typer(help="Explainable Crypto AI CLI")
-
-@app.command()
-def snapshot(snapshot: str, exchange: str = "binance", symbols: str = "BTC/USDT,ETH/USDT"):
-    snapshot_run(snapshot=snapshot, exchange=exchange, symbols=symbols)
-
-@app.command()
-def features(snapshot: str, exchange: str = "binance"):
-    features_run(snapshot=snapshot, exchange=exchange)
-
-@app.command()
-def train(config: str):
-    train_run(config)
-
-@app.command()
-def predict(checkpoint: str, snapshot: str):
-    predict_run(checkpoint, snapshot)
+app = typer.Typer(help="Explainable Crypto AI")
+app.add_typer(pipeline_app, name="pipeline")
+app.add_typer(training_app, name="train")
+app.add_typer(inference_app, name="predict")
+#app.add_typer(runner_app, name="run")
 
 if __name__ == "__main__":
     app()

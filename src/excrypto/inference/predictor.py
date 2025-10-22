@@ -3,7 +3,7 @@ import json, joblib
 import pandas as pd
 from datetime import datetime
 
-from excrypto.preprocessing import FeaturePipeline, FeatureConfig
+from excrypto.pipeline import FeaturePipeline, FeatureConfig
 from excrypto.utils import load_config, load_latest_model
 from excrypto.explain.explainer import ModelExplainer
 

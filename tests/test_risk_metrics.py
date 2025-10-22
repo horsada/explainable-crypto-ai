@@ -25,8 +25,8 @@ def test_var_es_monotonic():
 def test_var_backtests():
     rng = np.random.default_rng(1)
     r = pd.Series(rng.normal(0, 0.01, 2000))
+
     # pretend VaR_99 is constant estimate from sample
-    from excrypto.risk.metrics import var_historic
     VaR = var_historic(r.iloc[:1000], 0.99)
     viol = (-r.iloc[1000:] > VaR)
     p_k = kupiec_pof_test(viol, alpha=0.01)

@@ -9,7 +9,7 @@ import pandas as pd
 from datetime import datetime
 from lightgbm import LGBMClassifier
 
-# Expect: from excrypto.preprocessing import FeaturePipeline, FeatureConfig
+# Expect: from excrypto.pipeline import FeaturePipeline, FeatureConfig
 # (import inside methods to avoid circulars if needed)
 
 @dataclass
