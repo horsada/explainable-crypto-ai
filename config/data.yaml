@@ -1,0 +1,5 @@
+exchange: binance
+timeframe: 1m
+symbols: ["BTC/USDT","ETH/USDT","SOL/USDT"]
+funding_publication_lag: "5min"
+bar_close_lag: "0s"

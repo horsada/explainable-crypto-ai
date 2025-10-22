@@ -42,9 +42,7 @@ dev = [
 ]
 
 [project.scripts]
-excrypto-train = "excrypto.scripts.train:app"
-excrypto-eval = "excrypto.scripts.evaluate:app"
-excrypto-predict = "excrypto.scripts.predict:app"
+excrypto = "excrypto.cli:app"
 
 [tool.setuptools]
 package-dir = { "" = "src" }

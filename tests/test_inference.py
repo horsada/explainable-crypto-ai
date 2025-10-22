@@ -8,7 +8,7 @@ import pytest
 # ✅ Correct module paths
 from excrypto.inference import CryptoPredictor
 import excrypto.inference.predictor as predictor_mod
-import excrypto.preprocessing as preprocessing_mod
+import excrypto.pipeline as preprocessing_mod
 
 
 # ---------- STUBS ----------
