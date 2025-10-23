@@ -7,7 +7,7 @@ import numpy as np
 import typer
 from sklearn.metrics import accuracy_score, roc_auc_score, brier_score_loss
 
-from excrypto.preprocessing import FeaturePipeline, FeatureConfig
+from excrypto.pipeline import FeaturePipeline, FeatureConfig
 from excrypto.training.trainer import ModelTrainer, TrainerConfig
 
 app = typer.Typer(help="Evaluate model with a chronological split and baselines")

@@ -34,10 +34,10 @@ def es_historic(returns: pd.Series, level: float = 0.99) -> float:
     return float(np.mean(tail)) if tail.size else float("nan")
 
 def var_cornish_fisher(returns: pd.Series, level: float = 0.99) -> float:
-    """Cornish–Fisher adjusted VaR (one-period)."""
     x = returns.dropna().values
     mu, sigma = np.mean(x), np.std(x, ddof=0)
-    if sigma == 0 or np.isnan(sigma): return float("nan")
+    if sigma == 0 or np.isnan(sigma):
+        return float("nan")
     z = norm.ppf(level)
     s = (x - mu) / sigma
     skew = np.mean(s**3)
@@ -46,7 +46,10 @@ def var_cornish_fisher(returns: pd.Series, level: float = 0.99) -> float:
             (z**2 - 1)*skew/6 +
             (z**3 - 3*z)*kurt/24 -
             (2*z**3 - 5*z)*(skew**2)/36)
-    return float(-(mu + z_cf * sigma))
+    # VaR is quantile of losses L = -R → q_alpha(L) = -(mu + z_cf*sigma) ≥ 0
+    var = -(mu + z_cf * sigma)
+    return float(var if var >= 0 else 0.0)
+
 
 # ---------- VaR backtests ---------- #
 

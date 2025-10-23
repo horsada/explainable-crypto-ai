@@ -80,19 +80,27 @@ def backtest_single(df: pd.DataFrame, cfg: BacktestConfig, price_col="close", si
     })
     return out
 
-def backtest_multi(panel: pd.DataFrame, cfg: BacktestConfig, price_col="close", signal_col="signal") -> pd.DataFrame:
-    """
-    panel has columns: ['symbol', price_col, signal_col] indexed by time.
-    Returns portfolio results (EW across symbols after weights) with per-symbol optional detail.
-    """
+def backtest_multi(panel: pd.DataFrame, cfg: BacktestConfig,
+                   price_col="close", signal_col="signal") -> pd.DataFrame:
     if "symbol" not in panel.columns:
         raise ValueError("Require 'symbol' column for multi-asset backtest.")
+
     results = []
     for sym, df_sym in panel.groupby("symbol"):
-        res = backtest_single(df_sym[[price_col, signal_col]].copy(), cfg, price_col, signal_col)
+        res = backtest_single(df_sym[[price_col, signal_col]].copy(), cfg,
+                              price_col, signal_col)
         res["symbol"] = sym
         results.append(res)
-    joined = pd.concat(results).reset_index().set_index(["index","symbol"]).sort_index()
-    # Aggregate portfolio as equal-weight of symbol-level pnl_net at each timestamp
+
+    # Build MultiIndex: (timestamp, symbol)
+    joined = pd.concat(results)
+    joined = joined.set_index("symbol", append=True).sort_index()  # index -> (timestamp, symbol)
+
+    # Equal-weight portfolio across symbols each bar
     port = joined["pnl_net"].unstack("symbol").fillna(0.0).mean(axis=1)
-    return pd.DataFrame({"pnl_net": port, "equity": (1+port).cumprod()})
+
+    return pd.DataFrame({
+        "pnl_net": port,
+        "equity": (1.0 + port).cumprod()
+    })
+

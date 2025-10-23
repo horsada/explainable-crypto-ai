@@ -10,8 +10,10 @@ Also writes:
 import json
 import os
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Iterable, List, Optional
+import time
+from pathlib import Path
 
 import ccxt
 import pandas as pd
@@ -78,7 +80,7 @@ def _fetch_funding(ex: ccxt.Exchange, sym: str, limit: int) -> pd.DataFrame:
     return df
 
 
-def run(
+def run_day(
     snapshot: str,
     exchange: str = "binance",
     symbols: Optional[str] = None,          # CSV string OR None to infer from exchange (top pairs)
@@ -149,3 +151,77 @@ def run(
         json.dump(written, f, indent=2)
 
     return written
+
+
+@dataclass
+class SnapArgs:
+    exchange: str = "binance"
+    symbols: list[str] = None
+    timeframe: str = "1m"
+    limit: int = 1000  # per-API call
+    data_root: str = "data/raw"
+
+def _ts_utc(s: str) -> datetime:
+    return datetime.fromisoformat(s).replace(tzinfo=timezone.utc)
+
+def _ms(dt: datetime) -> int:
+    return int(dt.timestamp() * 1000)
+
+def _fetch_range(ex, symbol: str, timeframe: str, since_ms: int, 
+                 until_ms: int, limit: int) -> pd.DataFrame:
+    rows = []
+    t = since_ms
+    while t < until_ms:
+        batch = ex.fetch_ohlcv(symbol, timeframe=timeframe, since=t, limit=limit)
+        if not batch:
+            break
+        rows.extend(batch)
+        # ccxt rows are [ts, open, high, low, close, volume]
+        last_ts = batch[-1][0]
+        # advance; +1 ms to avoid duplicates
+        t = last_ts + 1
+        # be gentle on rate limits
+        time.sleep(getattr(ex, "rateLimit", 0) / 1000.0)
+        # stop if we somehow didn't move forward
+        if len(batch) < limit and last_ts >= until_ms:
+            break
+        if last_ts == batch[0][0] and len(batch) == 1:
+            break
+    if not rows:
+        return pd.DataFrame(columns=["timestamp","open","high","low","close","volume"])
+    df = pd.DataFrame(rows, columns=["timestamp","open","high","low","close","volume"])
+    df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
+    df = df[(df["timestamp"] >= pd.to_datetime(since_ms, unit="ms", utc=True)) &
+            (df["timestamp"] <  pd.to_datetime(until_ms, unit="ms", utc=True))]
+    return df.drop_duplicates(subset=["timestamp"]).sort_values("timestamp").reset_index(drop=True)
+
+def run_range(start: str, end: str, *, args: SnapArgs) -> str:
+    syms = args.symbols or ["BTC/USDT"]
+    start_dt, end_dt = _ts_utc(start), _ts_utc(end) + timedelta(days=1)  # end is inclusive; add 1 day
+    since_ms, until_ms = _ms(start_dt), _ms(end_dt)
+
+    snap_id = f"{start}_to_{end}"
+    out_root = Path(args.data_root) / snap_id / args.exchange
+    out_root.mkdir(parents=True, exist_ok=True)
+
+    ex = getattr(ccxt, args.exchange)()
+    ex.enableRateLimit = True
+    ex.load_markets()
+
+    for sym in syms:
+        df = _fetch_range(ex, sym, args.timeframe, since_ms, until_ms, args.limit)
+        out_dir = out_root / sym.replace("/","_")
+        out_dir.mkdir(parents=True, exist_ok=True)
+        df.to_parquet(out_dir / "ohlcv.parquet", index=False)
+
+    meta = {
+        "type": "combined_range",
+        "exchange": args.exchange,
+        "symbols": syms,
+        "timeframe": args.timeframe,
+        "start": start,
+        "end": end,
+        "created_utc": datetime.now(timezone.utc).isoformat(),
+    }
+    (out_root / "_snapshot_meta.json").write_text(json.dumps(meta, indent=2))
+    return str(out_root)

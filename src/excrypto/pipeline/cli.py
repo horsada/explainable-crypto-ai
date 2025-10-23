@@ -1,18 +1,39 @@
 import typer
 import pandas as pd, json, os
-from excrypto.pipeline.snapshot import run as snapshot_run
+from excrypto.pipeline.snapshot import run_day, run_range, SnapArgs
 from excrypto.pipeline.features import run as features_run
 from excrypto.pipeline.splits import build_rolling_splits
 
 app = typer.Typer(help="Data pipeline: snapshot → features → splits")
 
-@app.command()
+
+@app.command("snapshot")
 def snapshot(
-    snapshot: str = typer.Option(..., help="UTC date label, e.g. 2025-10-21"),
+    snapshot: str = typer.Option(None, help="YYYY-MM-DD (UTC)"),
+    start: str = typer.Option(None, help="Range start YYYY-MM-DD (UTC)"),
+    end: str = typer.Option(None, help="Range end YYYY-MM-DD (UTC)"),
     exchange: str = "binance",
-    symbols: str = typer.Option("BTC/USDT,ETH/USDT", help="CSV list"),
+    symbols: str = "BTC/USDT,ETH/USDT",
+    timeframe: str = "1m",
+    ohlcv_limit: int = 1000,
+    data_root: str = "data/raw",
 ):
-    snapshot_run(snapshot=snapshot, exchange=exchange, symbols=symbols)
+    syms = [s.strip() for s in symbols.split(",") if s.strip()]
+    args = SnapArgs(exchange=exchange, symbols=syms, timeframe=timeframe, limit=ohlcv_limit, data_root=data_root)
+
+    # mutually exclusive
+    if snapshot and (start or end):
+        raise typer.BadParameter("Use either --snapshot or (--start and --end), not both.")
+    if start or end:
+        if not (start and end):
+            raise typer.BadParameter("Provide both --start and --end for ranges.")
+        out = run_range(start, end, args=args)
+        typer.echo(f"Wrote combined range → {out}")
+    elif snapshot:
+        out = run_day(snapshot=snapshot, exchange=exchange, symbols=syms)  # your existing function
+        typer.echo(f"Wrote daily snapshot → {out}")
+    else:
+        raise typer.BadParameter("Provide --snapshot or a --start/--end range.")
 
 @app.command()
 def features(snapshot: str = typer.Option(..., help="UTC date label"), exchange: str = "binance", symbols: str = "", labels: bool = False):
