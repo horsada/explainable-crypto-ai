@@ -18,6 +18,7 @@ from pathlib import Path
 import ccxt
 import pandas as pd
 
+from excrypto.utils import registry
 
 @dataclass
 class SnapshotConfig:
@@ -133,6 +134,25 @@ def run_day(
         if not funding.empty:
             _write_parquet(funding, os.path.join(pair_dir, "funding.parquet"))
 
+        # right after writing ohlcv.parquet (and optional funding)
+        path = os.path.join(pair_dir, "ohlcv.parquet")
+        rows = int(ohlcv.shape[0])
+        first_ts = ohlcv["timestamp"].min().isoformat() if rows else None
+        last_ts  = ohlcv["timestamp"].max().isoformat() if rows else None
+
+        rec = {
+            "snapshot_id": cfg.snapshot,
+            "exchange": cfg.exchange,
+            "symbol": sym,
+            "timeframe": cfg.timeframe,
+            "path": path.replace("\\","/"),
+            "rows": rows,
+            "first_ts": first_ts,
+            "last_ts": last_ts,
+            "created_utc": datetime.now(timezone.utc).isoformat(),
+        }
+        registry.upsert_record(rec)
+
         written.append(sym)
 
     meta = {
@@ -214,6 +234,25 @@ def run_range(start: str, end: str, *, args: SnapArgs) -> str:
         out_dir.mkdir(parents=True, exist_ok=True)
         df.to_parquet(out_dir / "ohlcv.parquet", index=False)
 
+        path = str(out_dir / "ohlcv.parquet")
+        rows = int(df.shape[0])
+        first_ts = df["timestamp"].min().isoformat() if rows else None
+        last_ts  = df["timestamp"].max().isoformat() if rows else None
+
+        rec = {
+            "snapshot_id": snap_id,
+            "exchange": args.exchange,
+            "symbol": sym,
+            "timeframe": args.timeframe,
+            "path": path.replace("\\","/"),
+            "rows": rows,
+            "first_ts": first_ts,
+            "last_ts": last_ts,
+            "created_utc": datetime.now(timezone.utc).isoformat(),
+        }
+        registry.upsert_record(rec)
+
+
     meta = {
         "type": "combined_range",
         "exchange": args.exchange,
@@ -224,4 +263,6 @@ def run_range(start: str, end: str, *, args: SnapArgs) -> str:
         "created_utc": datetime.now(timezone.utc).isoformat(),
     }
     (out_root / "_snapshot_meta.json").write_text(json.dumps(meta, indent=2))
+
+
     return str(out_root)

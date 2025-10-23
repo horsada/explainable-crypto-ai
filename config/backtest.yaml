@@ -1,13 +1,9 @@
-# conf/engine_backtest.yaml
-mode: "multi"                           # or "single"
-data_path: "runs/my_model/panel.parquet"  # columns: timestamp, symbol, close, signal
-out_path: "runs/my_model/backtest.parquet"
+# Option A: registry
+snapshot: "COMBINED_2025-01-01_to_2025-10-22"
+symbols: ["BTC/USDT","ETH/USDT"]
 price_col: "close"
 signal_col: "signal"
-engine:
-  fee_bps: 1.0
-  slippage_bps: 1.0
-  latency_bars: 1
-  target_vol_ann: 0.20
-  max_leverage: 3.0
-  vol_lookback: 60
+engine: { fee_bps: 1.0, slippage_bps: 1.0, latency_bars: 1, target_vol_ann: 0.2, max_leverage: 3, vol_lookback: 60 }
+
+# Option B: direct file (unchanged)
+data_path: "runs/momentum/panel.parquet"

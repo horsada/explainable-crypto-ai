@@ -8,7 +8,7 @@ def run_daily(snapshot: str | None, symbols: str, exchange="binance"):
     sh(["excrypto","pipeline","snapshot","--snapshot",snap,"--exchange",exchange,"--symbols",symbols])
     # 2) signals (momentum)
     out = f"runs/{snap}/momentum"
-    sh(["excrypto","baseline","momentum","--snapshot",snap,"--exchange",exchange,"--symbols",symbols,"--out-dir",out])
+    sh(["excrypto","baseline","momentum","--snapshot",snap,"--symbols",symbols,"--out-dir",out])
     # 3) backtest
     if "," in symbols:
         single_or_multi = 'multi'
@@ -26,7 +26,7 @@ def run_range(start: str, end: str, timeframe: str, symbols: str, exchange="bina
 
     for strat in ['momentum', 'hodl']:
         out = f"runs/{data_name}/{strat}"
-        sh(["excrypto","baseline",f"{strat}","--snapshot",data_name,"--exchange",exchange,"--symbols",symbols,"--out-dir",out])
+        sh(["excrypto","baseline",f"{strat}","--snapshot",data_name,"--symbols",symbols,"--out-dir",out])
         # 3) backtest
         if "," in symbols:
             single_or_multi = 'multi'

@@ -2,8 +2,11 @@ import typer
 import pandas as pd
 from pathlib import Path
 from excrypto.baseline import momentum, hodl, vt_hodl  # your momentum.py
+from excrypto.utils import loader
 app = typer.Typer(help="Baselines: generate signals/panels")
 
+
+## deprecated
 def _load_panel(snapshot:str, exchange:str, symbols:list[str], data_root="data/raw")->pd.DataFrame:
     rows=[]
     base = Path(data_root)/snapshot/exchange
@@ -18,16 +21,14 @@ def _load_panel(snapshot:str, exchange:str, symbols:list[str], data_root="data/r
 @app.command("momentum")
 def momentum_signals(
     snapshot: str = typer.Option(...),
-    exchange: str = "binance",
     symbols: str = typer.Option("BTC/USDT,ETH/USDT", help="CSV"),
     fast: int = 20,
     slow: int = 60,
-    data_root: str = "data/raw",
     out_dir: str = "runs/momentum",
     write_panel: bool = True,
 ):
     syms = [s.strip() for s in symbols.split(",")]
-    panel = _load_panel(snapshot, exchange, syms, data_root)
+    panel = loader.load_snapshot(snapshot, syms)
     # build signals per symbol (PIT-safe inside momentum)
     sigs = []
     for sym, g in panel.groupby("symbol"):
@@ -45,14 +46,12 @@ def momentum_signals(
 @app.command("hodl")
 def hodl_signals(
     snapshot: str = typer.Option(...),
-    exchange: str = "binance",
     symbols: str = typer.Option("BTC/USDT,ETH/USDT"),
-    data_root: str = "data/raw",
     out_dir: str = "runs/hodl",
     write_panel: bool = True,
 ):
     syms = [s.strip() for s in symbols.split(",")]
-    panel = _load_panel(snapshot, exchange, syms, data_root)
+    panel = loader.load_snapshot(snapshot, syms)
     # constant +1
     sig = pd.DataFrame({"timestamp": panel.index, "symbol": panel["symbol"].values, "signal": 1.0})
     Path(out_dir).mkdir(parents=True, exist_ok=True)
