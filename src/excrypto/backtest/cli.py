@@ -52,6 +52,7 @@ def run(
     snapshot: str = typer.Argument(..., help="Registry snapshot_id (e.g. 2025-10-22 or COMBINED_...)"),
     strategy: str = typer.Argument(..., help="Strategy name used by baselines (e.g. 'momentum','hodl')"),
     symbols: str = typer.Argument(..., help="CSV symbols, e.g. 'BTC/USDT,ETH/USDT'"),
+    timeframe: str = typer.Option("1h", help="Timesteps"),
     params: str = typer.Option("", help="Optional strategy params key=val,key=val to select the right run folder"),
     config: str = typer.Option("config/backtest.yaml", help="YAML with engine: {fee_bps,...}"),
     out_path: str | None = typer.Option(None, help="Override output path (defaults to RunPaths.backtest)"),
@@ -62,7 +63,7 @@ def run(
     param_dict = _parse_params(params) or None
 
     # Locate artifacts via RunPaths
-    paths = RunPaths(snapshot=snapshot, strategy=strategy, symbols=tuple(syms), params=param_dict)
+    paths = RunPaths(snapshot=snapshot, strategy=strategy, symbols=tuple(syms), timeframe=timeframe, params=param_dict)
     panel_path = paths.panel
     df = _read_panel(panel_path)
 

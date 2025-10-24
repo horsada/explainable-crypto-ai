@@ -38,7 +38,8 @@ def _ex(exchange: str) -> ccxt.Exchange:
 
 
 def _path(cfg: SnapshotConfig, sym: str) -> str:
-    return os.path.join(cfg.root, cfg.snapshot, cfg.exchange, sym.replace("/", "_"))
+    return os.path.join(cfg.root, cfg.snapshot, cfg.exchange, cfg.timeframe, sym.replace("/", "_"))
+
 
 
 def _write_parquet(df: pd.DataFrame, path: str) -> None:
@@ -221,7 +222,7 @@ def run_range(start: str, end: str, *, args: SnapArgs) -> str:
     since_ms, until_ms = _ms(start_dt), _ms(end_dt)
 
     snap_id = f"{start}_to_{end}"
-    out_root = Path(args.data_root) / snap_id / args.exchange
+    out_root = Path(args.data_root) / snap_id / args.exchange / args.timeframe
     out_root.mkdir(parents=True, exist_ok=True)
 
     ex = getattr(ccxt, args.exchange)()

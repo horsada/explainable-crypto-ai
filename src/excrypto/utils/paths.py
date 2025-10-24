@@ -20,6 +20,7 @@ class RunPaths:
     snapshot: str
     strategy: str
     symbols: tuple[str, ...]               # keep stable ordering
+    timeframe: str
     params: dict | None = None
     runs_root: Path = Path("runs")
 
@@ -29,7 +30,7 @@ class RunPaths:
 
     @property
     def base(self) -> Path:
-        return self.runs_root / self.snapshot / self.strategy / self.universe / params_id(self.params)
+        return self.runs_root / self.snapshot / self.strategy / self.timeframe / self.universe / params_id(self.params)
 
     # common artifacts
     @property

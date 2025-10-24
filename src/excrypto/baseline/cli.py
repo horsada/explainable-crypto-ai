@@ -27,19 +27,20 @@ def _write_outputs(paths: RunPaths, panel: pd.DataFrame, signals: pd.DataFrame, 
 def momentum_signals(
     snapshot: str = typer.Option(..., help="registry snapshot_id"),
     symbols: str = typer.Option("BTC/USDT,ETH/USDT", help="CSV list"),
+    timeframe: str = typer.Option("1h", help="Timesteps"),
     fast: int = 20,
     slow: int = 60,
     write_panel: bool = True,
 ):
     syms = [s.strip() for s in symbols.split(",") if s.strip()]
-    panel = load_snapshot(snapshot, syms)  # index=timestamp, has 'symbol','close'
+    panel = load_snapshot(snapshot, syms, timeframe)  # index=timestamp, has 'symbol','close'
     # signals per symbol (PIT-safe inside momentum)
     sigs = []
     for sym, g in panel.groupby("symbol"):
         s = momentum._sma_sig(g["close"], fast=fast, slow=slow).rename("signal")
         sigs.append(pd.DataFrame({"timestamp": s.index, "symbol": sym, "signal": s.values}))
     signals = pd.concat(sigs).sort_values(["timestamp","symbol"])
-    paths = RunPaths(snapshot=snapshot, strategy="momentum", symbols=tuple(syms),
+    paths = RunPaths(snapshot=snapshot, strategy="momentum", symbols=tuple(syms), timeframe=timeframe,
                      params={"fast": fast, "slow": slow})
     _write_outputs(paths, panel, signals, write_panel)
 
@@ -47,10 +48,11 @@ def momentum_signals(
 def hodl_signals(
     snapshot: str = typer.Option(..., help="registry snapshot_id"),
     symbols: str = typer.Option("BTC/USDT,ETH/USDT", help="CSV list"),
+    timeframe: str = typer.Option("1h", help="Timesteps"),
     write_panel: bool = True,
 ):
     syms = [s.strip() for s in symbols.split(",") if s.strip()]
-    panel = load_snapshot(snapshot, syms)
+    panel = load_snapshot(snapshot, syms, timeframe)
     sig = pd.DataFrame({"timestamp": panel.index, "symbol": panel["symbol"].values, "signal": 1.0})
-    paths = RunPaths(snapshot=snapshot, strategy="hodl", symbols=tuple(syms), params=None)
+    paths = RunPaths(snapshot=snapshot, strategy="hodl", symbols=tuple(syms), timeframe=timeframe, params=None)
     _write_outputs(paths, panel, sig, write_panel)

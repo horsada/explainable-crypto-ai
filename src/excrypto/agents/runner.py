@@ -44,7 +44,7 @@ def run_daily(
         sh(["excrypto","pipeline","snapshot","--snapshot",snap,"--exchange",exchange,"--symbols",symbols])
 
     # Build paths for momentum
-    m_paths = RunPaths(snapshot=snap, strategy="momentum", symbols=tuple(syms), params=mom_params)
+    m_paths = RunPaths(snapshot=snap, strategy="momentum", symbols=tuple(syms), timeframe='1m', params=mom_params)
     m_paths.ensure()
 
     # 2) Signals (momentum)
@@ -104,7 +104,7 @@ def run_range(
         ])
 
     # --- Momentum ---
-    m_paths = RunPaths(snapshot=snap, strategy="momentum", symbols=tuple(syms), params=mom_params)
+    m_paths = RunPaths(snapshot=snap, strategy="momentum", symbols=tuple(syms), timeframe=timeframe, params=mom_params)
     m_paths.ensure()
 
     # 2) Signals
@@ -141,7 +141,7 @@ def run_range(
         ])
 
     # --- HODL (no params) ---
-    h_paths = RunPaths(snapshot=snap, strategy="hodl", symbols=tuple(syms), params=None)
+    h_paths = RunPaths(snapshot=snap, strategy="hodl", symbols=tuple(syms), timeframe=timeframe, params=None)
     h_paths.ensure()
 
     # 2) Signals

@@ -24,6 +24,7 @@ def report(
     snapshot: str = typer.Argument(..., help="Snapshot id (e.g. 2025-10-22 or COMBINED_...)"),
     strategy: str = typer.Argument(..., help="Strategy name (e.g. momentum, hodl)"),
     symbols: str = typer.Argument(..., help="CSV symbols (e.g. BTC/USDT,ETH/USDT)"),
+    timeframe: str = typer.Option("1h", help="Timesteps"),
     params: str = typer.Option("", help="Strategy params key=val,key=val to select run folder"),
     pnl_col: str = typer.Option("pnl_net", help="P&L column to evaluate (falls back to equity pct-change)"),
     title: str = typer.Option("", help="Report title (defaults to '<strategy> | <snapshot>')"),
@@ -31,7 +32,7 @@ def report(
     syms = _parse_symbols(symbols)
     param_dict = _parse_params(params)
 
-    paths = RunPaths(snapshot=snapshot, strategy=strategy, symbols=tuple(syms), params=param_dict)
+    paths = RunPaths(snapshot=snapshot, strategy=strategy, symbols=tuple(syms), timeframe=timeframe, params=param_dict)
     paths.ensure()
 
     bt = pd.read_parquet(paths.backtest)
