@@ -4,6 +4,7 @@ from pathlib import Path
 import pandas as pd
 from excrypto.agents.runner import run_daily, run_range
 from excrypto.agents.catalog import summarize
+from typing_extensions import Annotated
 
 app = typer.Typer(help="Agentic workflows")
 
@@ -12,8 +13,9 @@ def daily(
     snapshot: str = typer.Option("", help="YYYY-MM-DD UTC; empty = today"),
     symbols: str = "BTC/USDT,ETH/USDT",
     exchange: str = "binance",
+    override: Annotated[bool, typer.Option("--override")] = False,
 ):
-    run_daily(snapshot or None, symbols, exchange)
+    run_daily(snapshot or None, symbols, exchange, override)
 
 @app.command("range")
 def range(
@@ -22,8 +24,9 @@ def range(
     timeframe: str = '1m',
     symbols: str = "BTC/USDT,ETH/USDT",
     exchange: str = "binance",
+    override: Annotated[bool, typer.Option("--override")] = False,
 ):
-    run_range(start, end, timeframe, symbols, exchange)
+    run_range(start, end, timeframe, symbols, exchange, override)
 
 
 @app.command("catalog")
