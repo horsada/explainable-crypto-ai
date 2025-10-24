@@ -43,7 +43,14 @@ class RunPaths:
     def report_dir(self) -> Path:return self.base / "report"
     @property
     def report_md(self) -> Path: return self.report_dir / "risk_report.md"
+    @property
+    def features(self) -> Path:  return self.base / "features.parquet"
+    # (optional) metadata manifest for specs, hashes, etc.
+    @property
+    def manifest(self) -> Path:  return self.base / "manifest.json"
 
-    def ensure(self) -> None:
+    def ensure(self, report=True) -> None:
         self.base.mkdir(parents=True, exist_ok=True)
-        self.report_dir.mkdir(parents=True, exist_ok=True)
+        
+        if report:
+            self.report_dir.mkdir(parents=True, exist_ok=True)
