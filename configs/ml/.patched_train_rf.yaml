@@ -1,0 +1,21 @@
+{
+  "cv": {
+    "embargo": 24,
+    "n_splits": 5,
+    "purge": 24
+  },
+  "dataset": {
+    "snapshot": "2017-01-01_to_2017-12-31",
+    "symbols": [
+      "ETH/USDT"
+    ],
+    "timeframe": "1h"
+  },
+  "extra_params": {
+    "notes": "rf baseline on fh_24_cls"
+  },
+  "features_cfg": "configs/features/default.yaml",
+  "labels_cfg": "configs/labels/fh_24_cls.yaml",
+  "model": "rf",
+  "runs_root": "runs"
+}

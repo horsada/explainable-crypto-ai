@@ -1,0 +1,3 @@
+manifest: runs\2019-01-01_to_2019-12-31\ml_rf\1h\BTC_USDT\p-d22343\manifest.json
+threshold: 0.5
+runs_root_out: runs

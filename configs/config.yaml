@@ -1,0 +1,10 @@
+features:
+  - return
+  - volatility
+  - sma_5
+  - sma_10
+  - sma_diff
+  - sentiment_score
+
+model_path: models/price_predictor.pkl
+features_path: data/features.csv

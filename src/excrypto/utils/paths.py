@@ -45,6 +45,8 @@ class RunPaths:
     def report_md(self) -> Path: return self.report_dir / "risk_report.md"
     @property
     def features(self) -> Path:  return self.base / "features.parquet"
+    @property
+    def labels(self) -> Path:   return self.base / "labels.parquet"
     # (optional) metadata manifest for specs, hashes, etc.
     @property
     def manifest(self) -> Path:  return self.base / "manifest.json"

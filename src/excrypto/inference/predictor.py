@@ -3,13 +3,12 @@ import json, joblib
 import pandas as pd
 from datetime import datetime
 
-from excrypto.pipeline import FeaturePipeline, FeatureConfig
-from excrypto.utils import load_config, load_latest_model
+from excrypto.utils import load_cfg, load_latest_model
 from excrypto.explain.explainer import ModelExplainer
 
 class CryptoPredictor:
     def __init__(self, config_path="config/predict.yaml"):
-        self.config = load_config(config_path)
+        self.config = load_cfg(config_path)
         self.model, self.metadata = self.load_model()
 
         # --- features: single source of truth = model metadata ---

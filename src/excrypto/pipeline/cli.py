@@ -1,7 +1,6 @@
 import typer
 import pandas as pd, json, os
 from excrypto.pipeline.snapshot import run_day, run_range, SnapArgs
-from excrypto.pipeline.features import run as features_run
 from excrypto.pipeline.splits import build_rolling_splits
 
 app = typer.Typer(help="Data pipeline: snapshot → features → splits")
@@ -28,18 +27,12 @@ def snapshot(
         if not (start and end):
             raise typer.BadParameter("Provide both --start and --end for ranges.")
         out = run_range(start, end, args=args)
-        typer.echo(f"Wrote combined range → {out}")
+        typer.echo(f"Wrote combined range → {out}/{timeframe}/{syms}")
     elif snapshot:
         out = run_day(snapshot=snapshot, exchange=exchange, symbols=syms)  # your existing function
         typer.echo(f"Wrote daily snapshot → {out}")
     else:
         raise typer.BadParameter("Provide --snapshot or a --start/--end range.")
-
-@app.command()
-def features(snapshot: str = typer.Option(..., help="UTC date label"), exchange: str = "binance", symbols: str = "", labels: bool = False):
-    syms = [s.strip() for s in symbols.split(",")] if symbols else None
-    out = features_run(snapshot=snapshot, exchange=exchange, symbols=syms, compute_label=labels)
-    typer.echo(f"Wrote {out}")
 
 
 @app.command()

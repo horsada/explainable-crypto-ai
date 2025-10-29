@@ -8,6 +8,7 @@ import pandas as pd
 import typer
 
 from excrypto.utils.loader import load_snapshot
+from excrypto.utils.config import load_cfg, cfg_hash
 from excrypto.utils.paths import RunPaths
 from excrypto.features import FeaturePipeline
 
@@ -75,6 +76,7 @@ def build_features(
     snapshot: str = typer.Option(..., help="registry snapshot_id"),
     symbols: str = typer.Option("BTC/USDT,ETH/USDT", help="CSV list of symbols"),
     timeframe: str = typer.Option("1h", help="Timesteps (e.g., 1h, 15m)"),
+    cfg: Optional[Path] = typer.Option(None, "--config", help="YAML with 'specs' list"),
     specs: Optional[str] = typer.Option(None, "--specs", "-s", help="JSON list of feature specs"),
     write_panel: bool = typer.Option(True, help="Also write merged panel with close + features"),
 ):
@@ -84,7 +86,18 @@ def build_features(
     syms = _parse_symbols(symbols)
     panel = load_snapshot(snapshot, syms, timeframe).sort_index()  # index=timestamp, cols include symbol, close
 
-    feat_specs = _load_specs(specs)
+    # load specs from YAML or JSON or defaults
+    if cfg:
+        feat_cfg   = load_cfg(cfg)
+        feat_specs = feat_cfg["specs"]
+        feat_params = {"hash": cfg_hash({"specs": feat_specs})}   # <— only content
+    elif specs:
+        feat_specs = _load_specs(specs)
+        feat_params = {"hash": cfg_hash({"specs": feat_specs})}
+    else:
+        feat_specs = _default_specs()
+        feat_params = {"hash": cfg_hash({"specs": feat_specs})}
+
     pipe = FeaturePipeline(feat_specs).fit(panel)
 
     out_frames: list[pd.DataFrame] = []
@@ -101,7 +114,7 @@ def build_features(
         strategy="features",                 # namespace, not a trading strategy
         symbols=tuple(syms),
         timeframe=timeframe,
-        params={"specs": "default" if specs is None else "custom"},
+        params=feat_params,
         runs_root=Path("data/features"),     # <<< root redirected here
     )
     _write_outputs(paths, panel, features, write_panel)

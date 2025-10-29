@@ -1,0 +1,25 @@
+dataset:
+  snapshot: 2017-01-01_to_2017-12-31
+  timeframe: 1h
+  symbols: ["ETH/USDT"]
+  exchange: binance
+
+features:
+  cfg: configs/features/default.yaml
+  write_panel: true
+
+labels:
+  cfg: configs/labels/fh_24_cls.yaml
+  write_panel: true
+
+baselines:
+  momentum: { fast: 20, slow: 60 }
+  hodl: true
+
+ml:
+  train_cfg: configs/ml/train_rf.yaml     # this file can omit dataset; agent injects from `dataset`
+  predict:
+    threshold: 0.5
+    runs_root_out: runs
+
+runs_root: runs

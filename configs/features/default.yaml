@@ -1,0 +1,5 @@
+name: default
+specs:
+  - { name: log_returns, input_cols: [close], output_col: ret_log }
+  - { name: rolling_volatility, input_cols: [ret_log], output_col: vol_30, params: { window: 30 } }
+  - { name: rsi, input_cols: [close], output_col: rsi_14, params: { window: 14 } }

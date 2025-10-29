@@ -1,0 +1,14 @@
+dataset:
+  snapshot: 2019-01-01_to_2019-12-31
+  timeframe: 1h
+  symbols: ["BTC/USDT"]       # list, not CSV
+
+features_cfg: configs/features/default.yaml
+labels_cfg:   configs/labels/fh_24_cls.yaml
+
+model: rf
+cv: { n_splits: 5, purge: 24, embargo: 24 }
+runs_root: runs
+
+extra_params:
+  notes: "rf baseline on fh_24_cls"

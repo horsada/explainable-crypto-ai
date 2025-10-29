@@ -1,0 +1,4 @@
+kind: fh
+h: 24
+thr: 0.0
+mode: cls   # or "reg"
