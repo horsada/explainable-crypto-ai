@@ -1,5 +1,5 @@
 # src/excrypto/agents/catalog.py
-from excrypto.utils.registry import find
+from excrypto.data.registry import find
 import pandas as pd, math, os
 from datetime import datetime, timezone
 

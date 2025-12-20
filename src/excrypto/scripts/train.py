@@ -4,7 +4,7 @@ import yaml
 import pandas as pd
 import typer
 
-from excrypto.pipeline import FeaturePipeline, FeatureConfig
+from excrypto.data import FeaturePipeline, FeatureConfig
 from excrypto.training.trainer import ModelTrainer, TrainerConfig
 
 app = typer.Typer(help="Train model and save artifact + metadata")

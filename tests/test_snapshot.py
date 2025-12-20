@@ -1,5 +1,5 @@
 import json, os, pandas as pd
-from excrypto.pipeline.snapshot import run as snapshot_run
+from excrypto.data.snapshot import run as snapshot_run
 
 def test_snapshot_writes(tmp_path, monkeypatch):
     out = tmp_path / "data" / "raw"

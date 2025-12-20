@@ -48,6 +48,7 @@ def _write_outputs(paths: RunPaths, panel: pd.DataFrame, labels: pd.DataFrame, w
 def build_fixed_horizon(
     snapshot: str = typer.Option(...),
     symbols: str = typer.Option("BTC/USDT,ETH/USDT"),
+    exchange: str = typer.Option("binance"),
     timeframe: str = typer.Option("1h"),
     cfg: Optional[Path] = typer.Option(None, "--config", help="YAML with {kind: fh, h, thr, mode}"),
     horizon: int = typer.Option(24),
@@ -56,7 +57,7 @@ def build_fixed_horizon(
     write_panel: bool = typer.Option(True),
 ):
     syms = _parse_symbols(symbols)
-    panel = load_snapshot(snapshot, syms, timeframe).sort_index()
+    panel = load_snapshot(snapshot, syms, exchange=exchange, timeframe=timeframe).sort_index()
 
     if cfg:
         yml = load_cfg(cfg)
@@ -86,6 +87,7 @@ def build_triple_barrier(
     snapshot: str = typer.Option(...),
     symbols: str = typer.Option("BTC/USDT,ETH/USDT"),
     timeframe: str = typer.Option("1h"),
+    exchange: str = typer.Option("binance"),
     cfg: Optional[Path] = typer.Option(None, "--config", help="YAML with {kind: tb, h,u,d,w}"),
     horizon: int = typer.Option(24),
     up_mult: float = typer.Option(2.0),
@@ -94,7 +96,7 @@ def build_triple_barrier(
     write_panel: bool = typer.Option(True),
 ):
     syms = _parse_symbols(symbols)
-    panel = load_snapshot(snapshot, syms, timeframe).sort_index()
+    panel = load_snapshot(snapshot, syms, exchange=exchange, timeframe=timeframe).sort_index()
 
     if cfg:
         yml = load_cfg(cfg)

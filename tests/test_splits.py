@@ -2,7 +2,7 @@
 import pandas as pd
 import numpy as np
 import pytest
-from excrypto.pipeline.splits import (
+from excrypto.data.splits import (
     build_rolling_splits, make_purged_kfold_indices,
     assert_no_overlap, assert_increasing_windows
 )

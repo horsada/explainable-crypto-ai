@@ -75,6 +75,7 @@ def _write_outputs(paths: RunPaths, panel: pd.DataFrame, features: pd.DataFrame,
 def build_features(
     snapshot: str = typer.Option(..., help="registry snapshot_id"),
     symbols: str = typer.Option("BTC/USDT,ETH/USDT", help="CSV list of symbols"),
+    exchange: str = typer.Option("binance"),
     timeframe: str = typer.Option("1h", help="Timesteps (e.g., 1h, 15m)"),
     cfg: Optional[Path] = typer.Option(None, "--config", help="YAML with 'specs' list"),
     specs: Optional[str] = typer.Option(None, "--specs", "-s", help="JSON list of feature specs"),
@@ -84,7 +85,7 @@ def build_features(
     Create features per symbol and save under data/features/{snapshot}/features/{timeframe}/...
     """
     syms = _parse_symbols(symbols)
-    panel = load_snapshot(snapshot, syms, timeframe).sort_index()  # index=timestamp, cols include symbol, close
+    panel = load_snapshot(snapshot, syms, exchange=exchange, timeframe=timeframe).sort_index()  # index=timestamp, cols include symbol, close
 
     # load specs from YAML or JSON or defaults
     if cfg:

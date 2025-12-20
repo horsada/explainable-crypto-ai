@@ -6,7 +6,7 @@ from typing import Dict, List, Optional
 import json
 
 from excrypto.agents.tools import sh
-from excrypto.utils.registry import find
+from excrypto.data.registry import find
 from excrypto.utils.paths import RunPaths, sym_slug, universe_id
 from excrypto.utils.config import load_cfg, cfg_hash
 

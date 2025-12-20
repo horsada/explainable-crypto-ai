@@ -19,6 +19,19 @@ def _write_manifest(paths: RunPaths, meta: dict):
     target = getattr(paths, "manifest", paths.report_dir / "metadata.json")
     target.write_text(json.dumps(meta, indent=2, sort_keys=True))
 
+
+def _write_latest_manifest_pointer(runs_root: Path, snapshot: str, manifest_path: Path) -> Path:
+    """
+    Writes a stable pointer to the most recent manifest for this snapshot.
+    Orchestrator can read this instead of reconstructing run paths/hashes.
+    """
+    target = runs_root / snapshot / "latest_manifest.json"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    payload = {"manifest": str(manifest_path)}
+    target.write_text(json.dumps(payload, indent=2, sort_keys=True))
+    return target
+
+
 def _feat_params_from_yaml(path: Path) -> dict:
     cfg = load_cfg(path)
     return {"hash": cfg_hash({"specs": cfg["specs"]})}
@@ -32,27 +45,46 @@ def _label_params_from_yaml(path: Path) -> dict:
     return {"hash": cfg_hash(canon), **canon}
 
 @app.command("train")
-def train(cfg: Path = typer.Option(..., "--config", exists=True, dir_okay=False, help="ML train YAML")):
-    mlcfg = load_cfg(cfg)
+def train(
+    config: Path = typer.Option(..., "--config", "-c", exists=True, dir_okay=False),
+
+    # NEW overrides (all optional)
+    snapshot: str | None = typer.Option(None),
+    timeframe: str | None = typer.Option(None),
+    exchange: str | None = typer.Option(None),
+    symbols: str | None = typer.Option(None, help="CSV, e.g. ETH/USDT,BTC/USDT"),
+):
+    cfg = load_cfg(config)
+
+    # merge overrides into cfg["dataset"]
+    ds = cfg.setdefault("dataset", {})
+    if snapshot is not None:
+        ds["snapshot"] = snapshot
+    if timeframe is not None:
+        ds["timeframe"] = timeframe
+    if exchange is not None:
+        ds["exchange"] = exchange
+    if symbols is not None:
+        ds["symbols"] = [s.strip() for s in symbols.split(",") if s.strip()]
 
     # datasetcfg: Optional[Path] = typer.Option(None, "--config", help="YAML with 'specs' list"),
-    ds = mlcfg["dataset"]
+    ds = cfg["dataset"]
     snapshot  = ds["snapshot"]
     timeframe = ds["timeframe"]
     syms      = tuple(ds["symbols"])
 
     # model/cv/run
-    model     = mlcfg.get("model", "rf")
-    cvcfg     = mlcfg.get("cv", {})
+    model     = cfg.get("model", "rf")
+    cvcfg     = cfg.get("cv", {})
     n_splits  = int(cvcfg.get("n_splits", 5))
     purge     = int(cvcfg.get("purge", 0))
     embargo   = int(cvcfg.get("embargo", 0))
-    runs_root = Path(mlcfg.get("runs_root", "runs"))
-    extra     = mlcfg.get("extra_params", {})
+    runs_root = Path(cfg.get("runs_root", "runs"))
+    extra     = cfg.get("extra_params", {})
 
     # resolve features/labels via content-only params
-    feat_cfg_path = Path(mlcfg["features_cfg"])
-    lbl_cfg_path  = Path(mlcfg["labels_cfg"])
+    feat_cfg_path = Path(cfg["features_cfg"])
+    lbl_cfg_path  = Path(cfg["labels_cfg"])
     feat_params   = _feat_params_from_yaml(feat_cfg_path)
     label_params  = _label_params_from_yaml(lbl_cfg_path)
 
@@ -96,7 +128,13 @@ def train(cfg: Path = typer.Option(..., "--config", exists=True, dir_okay=False,
         "cv_report": cv_report, "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
     _write_manifest(paths, meta)
+
+    # NEW: stable pointer for orchestrator
+    manifest_path = getattr(paths, "manifest", paths.report_dir / "metadata.json")
+    ptr = _write_latest_manifest_pointer(runs_root, snapshot, manifest_path)
+
     typer.echo(f"✅ Trained {model} → {model_path}")
+    typer.echo(f"📌 Latest manifest → {ptr}")
 
 @app.command("predict")
 def predict(cfg: Path = typer.Option(..., "--config", exists=True, dir_okay=False)):

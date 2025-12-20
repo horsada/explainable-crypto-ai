@@ -3,23 +3,49 @@ from __future__ import annotations
 import typer
 from pathlib import Path
 import pandas as pd
-from excrypto.viz.api import (
+from excrypto.viz.reporting import (
     plot_feature_correlation, plot_label_balance, plot_roc_pr,
     plot_threshold_sweep, plot_equity_curve, write_report_links, from_train_manifest
 )
 from excrypto.viz.raw import price_series, volume_series, returns_hist, rolling_vol, missing_heatmap
 from excrypto.viz.features import histograms, rolling_feature, corr_heatmap, feature_target_corr
 from excrypto.utils.paths import RunPaths
+from excrypto.utils.loader import load_snapshot
 
 app = typer.Typer(help="Visualization helpers")
 
 @app.command("raw")
 def raw(
-    panel: Path = typer.Argument(..., exists=True, dir_okay=False),
+    # make panel optional
+    panel: Path | None = typer.Argument(None),
     out_dir: Path = typer.Option(...),
-    window: int = 24
+    window: int = 24,
+
+    # new options
+    snapshot: str | None = typer.Option(None),
+    symbols: str | None = typer.Option(None, help="CSV, e.g. BTC/USDT,ETH/USDT"),
+    timeframe: str | None = typer.Option(None),
+    exchange: str = typer.Option("binance", help="Exchange name, e.g. binance"),
 ):
+    """
+    If panel is provided: reads parquet panel.
+    Else if snapshot+symbols+timeframe provided: loads snapshot internally.
+    """
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    # NEW: dataset-arg path
+    if panel is None:
+        if not (snapshot and symbols and timeframe):
+            raise typer.BadParameter("Provide either PANEL path, or --snapshot --symbols --timeframe")
+
+        sym_list = [s.strip() for s in symbols.split(",") if s.strip()]
+        df = load_snapshot(snapshot, sym_list, timeframe=timeframe, exchange=exchange)
+
+        # write to a temp parquet inside out_dir (minimal change, keeps raw.py untouched)
+        panel = out_dir / "_panel.parquet"
+        df.reset_index().to_parquet(panel, index=False)
+
+    # existing behavior
     price_series(panel, out_dir)
     volume_series(panel, out_dir)
     returns_hist(panel, out_dir)

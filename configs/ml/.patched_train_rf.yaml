@@ -5,7 +5,7 @@
     "purge": 24
   },
   "dataset": {
-    "snapshot": "2017-01-01_to_2017-12-31",
+    "snapshot": "2018-01-01_to_2018-12-31",
     "symbols": [
       "ETH/USDT"
     ],

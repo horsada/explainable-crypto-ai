@@ -27,13 +27,14 @@ def _write_outputs(paths: RunPaths, panel: pd.DataFrame, signals: pd.DataFrame, 
 def momentum_signals(
     snapshot: str = typer.Option(..., help="registry snapshot_id"),
     symbols: str = typer.Option("BTC/USDT,ETH/USDT", help="CSV list"),
+    exchange: str = typer.Option("binance"),
     timeframe: str = typer.Option("1h", help="Timesteps"),
     fast: int = 20,
     slow: int = 60,
     write_panel: bool = True,
 ):
     syms = [s.strip() for s in symbols.split(",") if s.strip()]
-    panel = load_snapshot(snapshot, syms, timeframe)  # index=timestamp, has 'symbol','close'
+    panel = load_snapshot(snapshot, syms, exchange=exchange, timeframe=timeframe)  # index=timestamp, has 'symbol','close'
     # signals per symbol (PIT-safe inside momentum)
     sigs = []
     for sym, g in panel.groupby("symbol"):
@@ -48,11 +49,12 @@ def momentum_signals(
 def hodl_signals(
     snapshot: str = typer.Option(..., help="registry snapshot_id"),
     symbols: str = typer.Option("BTC/USDT,ETH/USDT", help="CSV list"),
+    exchange: str = typer.Option("binance"),
     timeframe: str = typer.Option("1h", help="Timesteps"),
     write_panel: bool = True,
 ):
     syms = [s.strip() for s in symbols.split(",") if s.strip()]
-    panel = load_snapshot(snapshot, syms, timeframe)
+    panel = load_snapshot(snapshot, syms, exchange=exchange, timeframe=timeframe)
     sig = pd.DataFrame({"timestamp": panel.index, "symbol": panel["symbol"].values, "signal": 1.0})
     paths = RunPaths(snapshot=snapshot, strategy="hodl", symbols=tuple(syms), timeframe=timeframe, params=None)
     _write_outputs(paths, panel, sig, write_panel)

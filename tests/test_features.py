@@ -1,5 +1,5 @@
 import pandas as pd
-from excrypto.pipeline import FeaturePipeline, FeatureConfig
+from excrypto.data import FeaturePipeline, FeatureConfig
 
 def test_features_pit_and_labels():
     ts = pd.date_range("2025-01-01", periods=10, freq="T", tz="UTC")

@@ -1,5 +1,5 @@
 import pandas as pd
-from excrypto.pipeline.pit import safe_final_bar, asof_join, assert_monotonic
+from excrypto.data.pit import safe_final_bar, asof_join, assert_monotonic
 
 def _df(ts, vals, symbol="BTC/USDT"):
     return pd.DataFrame({"symbol":symbol,"timestamp":pd.to_datetime(ts, utc=True),"x":vals})
