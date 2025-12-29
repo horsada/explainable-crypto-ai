@@ -1,9 +1,9 @@
 from __future__ import annotations
 import pandas as pd
 import numpy as np
-from .base import StatelessFeature
-from .registry import register_feature
-from .utils import _as_series, _safe_div
+from excrypto.features.base import StatelessFeature
+from excrypto.features.registry import register_feature
+from excrypto.features.utils import _as_series, _safe_div
 
 @register_feature("simple_returns")
 class SimpleReturns(StatelessFeature):

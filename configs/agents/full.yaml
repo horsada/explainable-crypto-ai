@@ -1,24 +1,35 @@
 dataset:
-  snapshot: 2018-01-01_to_2018-12-31
+  start: 2020-01-01
+  end: 2020-12-31
   timeframe: 1h
-  symbols: [ETH/USDT]
+  symbols: [BTC/USDT]
   exchange: binance
 
+
+runs_root: runs
+nan_policy: drop_any
+
 features:
-  cfg: configs/features/default.yaml
+  config: configs/features/default.yaml
 
 labels:
-  cfg: configs/labels/fh_24_cls.yaml
+  kind: fixed_horizon_return
+  config: configs/labels/fh_24_cls.yaml
+
+ml:
+  config: configs/ml/train_rf.yaml
+  threshold: 0.5
 
 baselines:
-  momentum: {fast: 20, slow: 60}
+  momentum: { fast: 20, slow: 60 }
   hodl: true
 
 backtest:
-  engine: { fee_bps: 1.0, slippage_bps: 1.0, latency_bars: 1, target_vol_ann: 0.2, max_leverage: 3, vol_lookback: 60 }
+  engine:
+    fee_bps: 1.0
+    slippage_bps: 1.0
+    latency_bars: 1
+    target_vol_ann: 0.2
+    max_leverage: 3
+    vol_lookback: 60
 
-ml:
-  train_cfg: configs/ml/train_rf.yaml
-  predict: {threshold: 0.5, runs_root_out: runs}
-
-runs_root: runs

@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Callable, Dict, Type
-from .base import Feature
+from excrypto.features.base import Feature
 
 _REGISTRY: Dict[str, Type[Feature]] = {}
 

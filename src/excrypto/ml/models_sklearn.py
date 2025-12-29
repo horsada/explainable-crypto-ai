@@ -1,12 +1,21 @@
+# src/excrypto/ml/models_sklearn.py
 from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any
+
 import joblib
 import numpy as np
-from dataclasses import dataclass
 from sklearn.ensemble import RandomForestClassifier
+
 
 @dataclass
 class SKLearnClassifier:
-    model: object = None
+    model: Any
+
+    def __post_init__(self) -> None:
+        if self.model is None:
+            raise ValueError("SKLearnClassifier requires a non-None model. Use SKLearnClassifier.make(...).")
 
     @classmethod
     def make(cls, kind: str = "rf", **kwargs) -> "SKLearnClassifier":
@@ -16,7 +25,7 @@ class SKLearnClassifier:
             raise ValueError(f"Unknown model kind: {kind}")
         return cls(model=m)
 
-    def fit(self, X, y):
+    def fit(self, X, y) -> "SKLearnClassifier":
         self.model.fit(X, y)
         return self
 
@@ -25,8 +34,7 @@ class SKLearnClassifier:
             p = self.model.predict_proba(X)
             if p.shape[1] == 2:
                 return p[:, 1]
-            # multi-class: take long-vs-rest prob as score
-            return p[:, p.shape[1]-1]
+            return p[:, -1]
         if hasattr(self.model, "decision_function"):
             s = self.model.decision_function(X)
             return s if s.ndim == 1 else s[:, -1]

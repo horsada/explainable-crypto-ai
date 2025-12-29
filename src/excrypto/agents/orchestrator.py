@@ -1,205 +1,198 @@
 # src/excrypto/agents/orchestrator.py
-
 from __future__ import annotations
 
-import json
+import subprocess
+from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Dict
+from typing import Any
 
-from excrypto.agents.tools import sh
-from excrypto.utils.config import load_cfg, cfg_hash
-from excrypto.utils.paths import RunPaths, sym_slug, universe_id
+import yaml
 
 
-# -------------------- hashing helpers --------------------
-
-def _feat_params_from_yaml(path: Path) -> dict:
-    cfg = load_cfg(path)
-    return {"hash": cfg_hash({"specs": cfg["specs"]})}
-
-
-def _params_str(params: Optional[Dict[str, str]]) -> str:
-    if not params:
-        return ""
-    return ",".join(f"{k}={v}" for k, v in sorted(params.items()))
+def _run(cmd: list[str]) -> None:
+    p = subprocess.run(cmd, text=True, capture_output=True)
+    if p.returncode != 0:
+        raise RuntimeError(
+            f"Command failed:\n  {' '.join(cmd)}\n\nstdout:\n{p.stdout}\n\nstderr:\n{p.stderr}"
+        )
 
 
-def _label_params_and_col_from_yaml(path: Path) -> tuple[dict, str]:
-    cfg = load_cfg(path)
-    kind = cfg.get("kind", "fh").lower()
-
-    if kind == "fh":
-        h = int(cfg["h"])
-        thr = float(cfg.get("thr", 0.0))
-        mode = cfg.get("mode", "cls")
-        canon = {"kind": "fh", "h": h, "thr": thr, "mode": mode}
-        label_col = f"fh_{'lbl' if mode == 'cls' else 'ret'}_{h}"
-        return ({"hash": cfg_hash(canon), **canon}, label_col)
-
-    if kind == "tb":
-        h = int(cfg["h"])
-        u = float(cfg["u"])
-        d = float(cfg["d"])
-        w = int(cfg["w"])
-        canon = {"kind": "tb", "h": h, "u": u, "d": d, "w": w}
-
-        def _fmt(x: float) -> str:
-            s = f"{x:.6g}"
-            if "." not in s:
-                s += ".0"
-            return s
-
-        label_col = f"tb_lbl_h{h}_u{_fmt(u)}_d{_fmt(d)}_w{w}"
-        return ({"hash": cfg_hash(canon), **canon}, label_col)
-
-    raise ValueError("unknown label kind in labels yaml")
+def _req(d: dict[str, Any], k: str) -> Any:
+    if k not in d:
+        raise ValueError(f"Missing required key: {k}")
+    return d[k]
 
 
-# -------------------- Orchestrator entry --------------------
+@dataclass(frozen=True)
+class Plan:
+    start: str
+    end: str
+    snapshot: str                 # canonical snapshot id used by RunPaths + stages
+    symbols: list[str]
+    exchange: str
+    timeframe: str
+    runs_root: Path
+    nan_policy: str
+    features_config: Path | None
+    labels_config: Path | None
+    labels_kind: str
+    ml_config: Path | None
+    ml_threshold: float
 
-def run_plan(config: Path) -> None:
-    cfg = load_cfg(config)
 
-    # ---- dataset ----
-    ds = cfg["dataset"]
-    snapshot = ds["snapshot"]
-    timeframe = ds["timeframe"]
-    symbols = ds["symbols"]
-    exchange = ds.get("exchange", "binance")
+def _load_plan(config_path: Path) -> Plan:
+    cfg = yaml.safe_load(config_path.read_text()) or {}
+
+    dataset = _req(cfg, "dataset")
+    start = str(_req(dataset, "start"))
+    end = str(_req(dataset, "end"))
+
+    # Canonical snapshot id: matches data/snapshot raw folder naming
+    snapshot_id = f"{start}_to_{end}"
+
+    symbols = _req(dataset, "symbols")
+    if not isinstance(symbols, list) or not all(isinstance(s, str) for s in symbols):
+        raise ValueError("dataset.symbols must be a list[str]")
+
+    exchange = str(dataset.get("exchange", "binance"))
+    timeframe = str(dataset.get("timeframe", "1h"))
+
     runs_root = Path(cfg.get("runs_root", "runs"))
-    sym_csv = ",".join(symbols)
+    nan_policy = str(cfg.get("nan_policy", "drop_any"))
 
-    # ---- snapshot build (use new data CLI) ----
-    if "_to_" in snapshot:
-        start, end = snapshot.split("_to_")
-    else:
-        start = end = snapshot
+    features_config = cfg.get("features", {}).get("config")
+    labels_section = cfg.get("labels", {})
+    labels_config = labels_section.get("config")
+    labels_kind = str(labels_section.get("kind", "fixed_horizon_return"))
 
-    sh([
+    ml_section = cfg.get("ml", {})
+    ml_config = ml_section.get("config")
+    ml_threshold = float(ml_section.get("threshold", 0.5))
+
+    return Plan(
+        start=start,
+        end=end,
+        snapshot=snapshot_id,
+        symbols=symbols,
+        exchange=exchange,
+        timeframe=timeframe,
+        runs_root=runs_root,
+        nan_policy=nan_policy,
+        features_config=Path(features_config) if features_config else None,
+        labels_config=Path(labels_config) if labels_config else None,
+        labels_kind=labels_kind,
+        ml_config=Path(ml_config) if ml_config else None,
+        ml_threshold=ml_threshold,
+    )
+
+
+def run_plan(config_path: Path) -> None:
+    plan = _load_plan(config_path)
+    sym_csv = ",".join(plan.symbols)
+
+    # 1) raw snapshot download
+    _run([
         "excrypto", "data", "snapshot",
-        "--start", start, "--end", end,
-        "--exchange", exchange,
+        "--start", plan.start,
+        "--end", plan.end,
+        "--exchange", plan.exchange,
         "--symbols", sym_csv,
-        "--timeframe", timeframe,
+        "--timeframe", plan.timeframe,
     ])
 
-    # ---- snapshot viz (CLI-driven raw viz) ----
-    uni = sym_slug(symbols[0]) if len(symbols) == 1 else f"u-{universe_id(symbols)}"
-    snap_report_dir = runs_root / snapshot / "snapshot_viz" / timeframe / uni
-    snap_report_dir.mkdir(parents=True, exist_ok=True)
-    sh([
-        "excrypto", "viz", "raw",
-        "--snapshot", snapshot,
+    # 1b) build panel artifact in runs/ for downstream stages
+    _run([
+        "excrypto", "data", "panel",
+        "--snapshot", plan.snapshot,
+        "--exchange", plan.exchange,
         "--symbols", sym_csv,
-        "--timeframe", timeframe,
-        "--exchange", exchange,
-        "--out-dir", str(snap_report_dir),
+        "--timeframe", plan.timeframe,
+        "--runs-root", str(plan.runs_root),
     ])
 
-    # ---- features ----
-    f_cfg = Path(cfg["features"]["cfg"])
-    sh([
+    # 2) baselines (generate signals only)
+    _run([
+        "excrypto", "baseline", "momentum",
+        "--snapshot", plan.snapshot,
+        "--symbols", sym_csv,
+        "--exchange", plan.exchange,
+        "--timeframe", plan.timeframe,
+        "--fast", "20",
+        "--slow", "60",
+    ])
+
+    _run([
+        "excrypto", "baseline", "hodl",
+        "--snapshot", plan.snapshot,
+        "--symbols", sym_csv,
+        "--exchange", plan.exchange,
+        "--timeframe", plan.timeframe,
+    ])
+
+
+    # 3) features
+    feat_cmd = [
         "excrypto", "features", "build",
-        "--snapshot", snapshot, "--symbols", sym_csv, "--exchange", exchange, "--timeframe", timeframe,
-        "--config", str(f_cfg),
-        *(["--write-panel"] if cfg["features"].get("write_panel", False) else []),
+        "--snapshot", plan.snapshot,
+        "--symbols", sym_csv,
+        "--exchange", plan.exchange,
+        "--timeframe", plan.timeframe,
+        "--runs-root", str(plan.runs_root),
+        "--nan-policy", plan.nan_policy,
+    ]
+    if plan.features_config:
+        feat_cmd += ["--config", str(plan.features_config)]
+    _run(feat_cmd)
+
+    # 4) labels
+    lbl_cmd = [
+        "excrypto", "labels", "build",
+        "--snapshot", plan.snapshot,
+        "--symbols", sym_csv,
+        "--exchange", plan.exchange,
+        "--timeframe", plan.timeframe,
+        "--runs-root", str(plan.runs_root),
+        "--nan-policy", plan.nan_policy,
+        "--kind", plan.labels_kind,
+    ]
+    if plan.labels_config:
+        lbl_cmd += ["--config", str(plan.labels_config)]
+    _run(lbl_cmd)
+
+    # 5) ml train (uses latest pointers by default)
+    train_cmd = [
+        "excrypto", "ml", "train",
+        "--snapshot", plan.snapshot,
+        "--symbols", sym_csv,
+        "--exchange", plan.exchange,
+        "--timeframe", plan.timeframe,
+        "--runs-root", str(plan.runs_root),
+    ]
+    if plan.ml_config:
+        train_cmd += ["--config", str(plan.ml_config)]
+    _run(train_cmd)
+
+    # 6) ml predict (uses ml latest pointer by default)
+    _run([
+        "excrypto", "ml", "predict",
+        "--snapshot", plan.snapshot,
+        "--symbols", sym_csv,
+        "--exchange", plan.exchange,
+        "--timeframe", plan.timeframe,
+        "--runs-root", str(plan.runs_root),
+        "--threshold", str(plan.ml_threshold),
     ])
 
-    feat_params = _feat_params_from_yaml(f_cfg)
-    fpaths_data = RunPaths(
-        snapshot, "features", tuple(symbols), timeframe,
-        params=feat_params, runs_root=Path("data/features")
-    )
-
-    # ---- labels ----
-    l_cfg = Path(cfg["labels"]["cfg"])
-    lbl_kind = load_cfg(l_cfg).get("kind", "fh")
-    sh([
-        "excrypto", "labels", ("tb" if lbl_kind == "tb" else "fh"),
-        "--snapshot", snapshot, "--symbols", sym_csv, "--exchange", exchange, "--timeframe", timeframe,
-        "--config", str(l_cfg),
-        *(["--write-panel"] if cfg["labels"].get("write_panel", False) else []),
-    ])
-
-    label_params, label_col = _label_params_and_col_from_yaml(l_cfg)
-    lpaths_data = RunPaths(
-        snapshot, "labels", tuple(symbols), timeframe,
-        params=label_params, runs_root=Path("data/labels")
-    )
-
-    # ---- labelled feature viz ----
-    feat_report_dir = runs_root / snapshot / "feature_viz" / timeframe / uni
-    feat_report_dir.mkdir(parents=True, exist_ok=True)
-    sh([
-        "excrypto", "viz", "features",
-        str(fpaths_data.features),
-        "--out-dir", str(feat_report_dir),
-        "--labels-path", str(lpaths_data.labels),
-        "--label-col", label_col,
-    ])
-
-    # ---- baselines (unchanged) ----
-    bl = cfg.get("baselines", {})
-    if "momentum" in bl:
-        fast = str(bl["momentum"].get("fast", 20))
-        slow = str(bl["momentum"].get("slow", 60))
-        mom_params = {"fast": fast, "slow": slow}
-        sh([
-            "excrypto", "baseline", "momentum",
-            "--snapshot", snapshot, "--symbols", sym_csv, "--exchange", exchange, "--timeframe", timeframe,
-            "--fast", fast, "--slow", slow
-        ])
-        sh([
+    # 7) backtests
+    for strategy in ["predict", "momentum", "hodl"]:
+        _run([
             "excrypto", "backtest", "run",
-            snapshot, "momentum", sym_csv,
-            "--params", _params_str(mom_params),
-            "--config", "configs/backtest.yaml"
-        ])
-        sh([
-            "excrypto", "risk", "report",
-            snapshot, "momentum", sym_csv,
-            "--params", _params_str(mom_params),
-            "--pnl-col", "pnl_net",
-            "--title", f"momentum | {snapshot}"
+            plan.snapshot,
+            sym_csv,
+            "--exchange", plan.exchange,
+            "--timeframe", plan.timeframe,
+            "--signals-strategy", strategy,
+            "--config", "configs/agents/full.yaml",
         ])
 
-    if bl.get("hodl"):
-        sh([
-            "excrypto", "baseline", "hodl",
-            "--snapshot", snapshot, "--symbols", sym_csv, "--exchange", exchange, "--timeframe", timeframe
-        ])
-        sh(["excrypto", "backtest", "run", snapshot, "hodl", sym_csv, "--config", "configs/backtest.yaml"])
-        sh([
-            "excrypto", "risk", "report",
-            snapshot, "hodl", sym_csv,
-            "--pnl-col", "pnl_net",
-            "--title", f"hodl | {snapshot}"
-        ])
 
-    # ---- ML train ----
-    train_cfg = Path(cfg["ml"]["train_cfg"])
-    sh([
-        "excrypto", "ml", "train", "--config", str(train_cfg), "--snapshot", snapshot,
-        "--timeframe", timeframe, "--exchange", exchange, "--symbols", sym_csv,
-    ])
-
-
-    # ---- ML predict via pointer written by ml train ----
-    ptr = runs_root / snapshot / "latest_manifest.json"
-    if not ptr.exists():
-        raise FileNotFoundError(f"Expected manifest pointer not found: {ptr}")
-
-    manifest = Path(json.loads(ptr.read_text())["manifest"])
-
-    predict_cfg_path = runs_root / snapshot / ".predict.json"
-    predict_cfg = {
-        "manifest": str(manifest),
-        "threshold": float(cfg.get("ml", {}).get("predict", {}).get("threshold", 0.5)),
-        "runs_root_out": str(cfg.get("ml", {}).get("predict", {}).get("runs_root_out", runs_root)),
-    }
-    predict_cfg_path.write_text(json.dumps(predict_cfg, indent=2, sort_keys=True))
-
-    sh(["excrypto", "ml", "predict", "--config", str(predict_cfg_path)])
-
-    # ---- report from train manifest ----
-    sh(["excrypto", "viz", "from-train", str(manifest)])
