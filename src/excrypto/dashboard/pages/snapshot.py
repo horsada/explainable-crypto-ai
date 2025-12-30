@@ -90,8 +90,9 @@ with st.sidebar:
     snapshot, timeframe, symbol, prefer, p_hash = pick_snapshot_selection(RUNS_ROOT)
 
 run_dir, manifest_path = resolve_run_dir(
-    RUNS_ROOT, snapshot, stage='snapshot', timeframe, universe=symbol, prefer=prefer, p_hash=p_hash
+    RUNS_ROOT, snapshot, stage='snapshot', timeframe=timeframe, universe=symbol, prefer=prefer, p_hash=p_hash
 )
+
 if not run_dir:
     st.error("Could not resolve a snapshot run directory for this selection.")
     st.stop()

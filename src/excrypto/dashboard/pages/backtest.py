@@ -131,6 +131,15 @@ if not run_dir:
     st.error("Could not resolve a backtest run for this selection.")
     st.stop()
 
+manifest_path = run_dir / "manifest.json"
+manifest = read_json(manifest_path) if manifest_path.exists() else {}
+
+signals_strategy = (manifest.get("inputs") or {}).get("signals_strategy") or (manifest.get("params") or {}).get("src") or "—"
+signals_path = (manifest.get("inputs") or {}).get("signals_path") or "—"
+
+st.caption(f"Signals strategy: {signals_strategy}")
+st.caption(f"Signals path: {signals_path}")
+
 bt_path = run_dir / "backtest.parquet"
 if not bt_path.exists():
     st.error(f"backtest.parquet missing: {bt_path}")
