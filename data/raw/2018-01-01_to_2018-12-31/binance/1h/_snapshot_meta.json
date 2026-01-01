@@ -1,0 +1,12 @@
+{
+  "snapshot_id": "2018-01-01_to_2018-12-31",
+  "exchange": "binance",
+  "timeframe": "1h",
+  "symbols": [
+    "BTC/USDT"
+  ],
+  "start": "2018-01-01",
+  "end": "2018-12-31",
+  "created_utc": "2025-12-28T18:10:32.684443+00:00",
+  "ccxt_version": "4.5.12"
+}

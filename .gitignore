@@ -1,5 +1,7 @@
 *.egg-info/
-data/
+ /data/
+!src/excrypto/data/
+!src/excrypto/data/**
 models/
 plots/
 .venv/
